@@ -4,7 +4,7 @@ Status: Experiment
 This code is inspired by a paper on shredding.
 
 > Query Shredding: Efficient Relational Evaluation of Queries ...
-> homepages.inf.ed.ac.uk/slindley/papers/shredding.pdf
+> http://homepages.inf.ed.ac.uk/slindley/papers/shredding.pdf
 > by J Cheney - ‎Cited by 7 - ‎Related articles
 > Query Shredding: Efficient Relational Evaluation of. Queries over Nested Multisets. James Cheney. University of Edinburgh jcheney@inf.ed.ac.uk. Sam Lindley.
 
