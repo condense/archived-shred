@@ -192,7 +192,7 @@
          (flatten-nested-joins env)
          (raise-stitches env))))
 
-(do
+(comment
 
   (require 'shred.impl.simple-schema)
 
