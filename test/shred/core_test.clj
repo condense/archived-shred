@@ -1,10 +1,12 @@
 (ns shred.core-test
   (:require [clojure.test :refer :all]
-            [shred.core :refer :all]))
+            [shred.core :refer :all]
+            [shred.protocols :refer [pk rel has-many?]]
+            [shred.impl.simple-schema :refer [simple-schema]]))
 
 
 (deftest test-analyse-join-tables
-  (let [db-schema (map->SimpleSchema {:pks {} :rels {}})
+  (let [db-schema (simple-schema {} {})
         env {:db-schema db-schema}]
     (->> {:type         :join,
           :dispatch-key :a,
@@ -19,7 +21,7 @@
 
 
 (deftest test-flatten-nested-joins
-  (let [db-schema (map->SimpleSchema {:pks {} :rels {}})
+  (let [db-schema (simple-schema {} {})
         env {:db-schema db-schema}
         ast {:type     :join,
                :children [{:type :expr, :path [:a :a1], :expr :a6938.a1}
@@ -58,10 +60,9 @@
 
 
 (deftest test-not-flatten-nested-many-join
-  (let [db-schema (map->SimpleSchema {:pks  {}
-                                      :rels {:Meetings
-                                             {:Races        [:Races {:Id :MeetingId}]
-                                              :Jurisdiction [:Jurisdictions {:JurisdictionId :Id}]}}})
+  (let [db-schema (simple-schema
+                    {} {[:Meetings :Races]        [:Races {:Id :MeetingId}]
+                        [:Meetings :Jurisdiction] [:Jurisdictions {:JurisdictionId :Id}]})
         env {:db-schema db-schema}
         ast {:type  :join,
              :children
@@ -98,10 +99,9 @@
 
 
 (deftest test-raise-stitches
-  (let [db-schema (map->SimpleSchema {:pks  {}
-                                      :rels {:Meetings
-                                             {:Races        [:Races {:Id :MeetingId}]
-                                              :Jurisdiction [:Jurisdictions {:JurisdictionId :Id}]}}})
+  (let [db-schema (simple-schema
+                    {} {[:Meetings :Races]        [:Races {:Id :MeetingId}]
+                        [:Meetings :Jurisdiction] [:Jurisdictions {:JurisdictionId :Id}]})
         env {:db-schema db-schema}
         ast {:type     :join,
              :children [{:type  :join,
