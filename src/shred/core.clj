@@ -4,7 +4,8 @@
             [clojure.walk :refer [prewalk postwalk]]
             [clojure.pprint :refer [pprint]]
             [clojure.string :refer [lower-case]]
-            [clojure.test :refer [is]]))
+            [clojure.test :refer [is]]
+            [shred.protocols :refer [rel has-many? pk]]))
 
 ; TODO: #shred
 ;  - Handling params:
@@ -19,56 +20,8 @@
 ; TODO: #stitch
 ;  - Stitch data back together after running queries.
 
-(def RelationSchema
-  {:from s/Keyword
-   :to   s/Keyword
-   :on   {s/Keyword s/Keyword}})
 
-(defprotocol IDBSchema
-  "Schema definition to guide the query analyser."
 
-  (-pk [_ table-name]
-    "Return pk column for a table. FIXME: change to support composite keys.")
-
-  (-rel [_ table-name rel-name]
-    "Return details of a relation (join).")
-
-  (-has-many? [_ table-name rel-name]
-    "Return true if relation can return many results."))
-
-(defn pk
-  [schema table-name]
-  (-pk schema table-name))
-
-(defn rel
-  [schema from-table rel-name]
-  {:post [(is (s/validate RelationSchema %))]}
-  (-rel schema from-table rel-name))
-
-(defn has-many?
-  [schema table-name rel-name]
-  (-has-many? schema table-name rel-name))
-
-(defrecord SimpleSchema [pks rels]
-
-  IDBSchema
-  (-pk [_ table-name]
-    (get pks table-name :Id))
-
-  (-rel [schema from-table rel-name]
-    (if-let [[to-table field-mapping] (get-in rels [from-table rel-name])]
-      {:from from-table
-       :to   to-table
-       :on   field-mapping}
-      {:from from-table
-       :to   rel-name
-       :on   {(keyword (str (name rel-name) "_Id"))
-              (pk schema rel-name)}}))
-
-  (-has-many?
-    [db-schema table-name rel-name]
-    (if-let [{:keys [on]} (rel db-schema table-name rel-name)]
-      (not= [(pk db-schema table-name)] (vals on)))))
 
 (defn preprocess-ast
   [env ast]
@@ -213,10 +166,10 @@
 (defmethod -raise-stitches :join
   [{:keys [state]} {:keys [root? many?] :as ast}]
   (let [ast (update ast :children #(remove nil? %))]
-      (cond
-        root? (do (swap! state conj ast) nil)
-        many? (do (swap! state conj ast) nil)
-        :else ast)))
+    (cond
+      root? (do (swap! state conj ast) nil)
+      many? (do (swap! state conj ast) nil)
+      :else ast)))
 
 (defn raise-stitches
   "Return list of simple queries."
@@ -239,15 +192,20 @@
          (flatten-nested-joins env)
          (raise-stitches env))))
 
-(comment
+(do
 
-  (let [db-schema (map->SimpleSchema {:pks  {:User :UserId}
-                                      :rels {:Races    {:Meeting [:Meetings {:MeetingId :Id}]
-                                                        :Analyst [:User {:AnalystId :UserId}]
-                                                        :Supervisor [:User {:SupervisorId :UserId}]}
-                                             :Meetings {:Races [:Races {:Id :MeetingId}]
-                                                        :Venue [:Venues {:VenueId :Id}]}
-                                             :Venues   {:Meetings [:Meetings {:Id :VenueId}]}}})
+  (require 'shred.impl.simple-schema)
+
+  (let [db-schema (shred.impl.simple-schema/simple-schema
+                    {:User :UserId}
+                    {
+                     ;[:Races :Meeting]    [:Meetings {:MeetingId :Id}]
+                     ;[:Races :Analyst]    [:User {:AnalystId :UserId}]
+                     ;[:Races :Supervisor] [:User {:SupervisorId :UserId}]
+                     ;[:Meetings :Races]   [:Races {:Id :MeetingId}]
+                     ;[:Meetings :Venue]   [:Venues {:VenueId :Id}]
+                     ;[:Venues :Meetings]  [:Meetings {:Id :VenueId}]
+                     })
         query {:Venues [{:Meetings [:MeetDate]}]}]
     (-> (build-queries db-schema query)
         (pprint))))
