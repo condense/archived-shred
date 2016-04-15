@@ -12,7 +12,7 @@
      e.g. (rel (simple-schema {} {}) :a :b) will guess that table :a has a foreign key :b_id
 
   "
-  (:require [shred.protocols :refer [-pk -rel -has-many?]]
+  (:require [shred.protocols :refer [pk rel has-many?]]
             [schema.core :as s])
   (:import (shred.protocols IDBSchema)))
 
